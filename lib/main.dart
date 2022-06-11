@@ -1,5 +1,8 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_tts/flutter_tts.dart';
+import 'package:http/http.dart' as http;
 
 void main() {
   runApp(const MyApp());
@@ -50,49 +53,35 @@ class MyHomePage extends StatefulWidget {
 
 class _MyHomePageState extends State<MyHomePage> {
   int _counter = 0;
+  List<CardEntry> cardList = [];
 
-  final List<CardEntry> cardList = [
-    const CardEntry(
-        imageUrl:
-            "http://www.numazu-deepsea.com/wordpress/wp-content/uploads/2014/03/0b56dc85c978c675582bdb1c05761118.jpg",
-        title: "title",
-        description: "description"),
-    const CardEntry(
-        imageUrl:
-            "http://www.numazu-deepsea.com/wordpress/wp-content/uploads/2014/03/0b56dc85c978c675582bdb1c05761118.jpg",
-        title: "title",
-        description: "description"),
-    const CardEntry(
-        imageUrl:
-            "http://www.numazu-deepsea.com/wordpress/wp-content/uploads/2014/03/0b56dc85c978c675582bdb1c05761118.jpg",
-        title: "title",
-        description: "description"),
-    const CardEntry(
-        imageUrl:
-            "http://www.numazu-deepsea.com/wordpress/wp-content/uploads/2014/03/0b56dc85c978c675582bdb1c05761118.jpg",
-        title: "title",
-        description: "description"),
-    const CardEntry(
-        imageUrl:
-            "http://www.numazu-deepsea.com/wordpress/wp-content/uploads/2014/03/0b56dc85c978c675582bdb1c05761118.jpg",
-        title: "title",
-        description: "description"),
-    const CardEntry(
-        imageUrl:
-            "http://www.numazu-deepsea.com/wordpress/wp-content/uploads/2014/03/0b56dc85c978c675582bdb1c05761118.jpg",
-        title: "title",
-        description: "description"),
-  ];
+  Future getData() async {
+    http.Response response = await http.get(Uri.parse(
+        "https://sovapritz.github.io/talking_picture_book/data.json"));
+    if (response.statusCode == 200) {
+      Map data = jsonDecode(response.body);
+      List<CardEntry> entries = [];
+      for (var i = 0; i < data["entries"].length; i++) {
+        var entry = data["entries"][i];
+        print(entry["imageUrl"]);
+        CardEntry cardEntry = CardEntry(
+          imageUrl: entry["imageUrl"],
+          title: entry["title"],
+          description: entry["description"],
+        );
+        entries.add(cardEntry);
+      }
+      setState(() {
+        cardList = entries;
+      });
+    }
+  }
 
-  void _incrementCounter() {
-    setState(() {
-      // This call to setState tells the Flutter framework that something has
-      // changed in this State, which causes it to rerun the build method below
-      // so that the display can reflect the updated values. If we changed
-      // _counter without calling setState(), then the build method would not be
-      // called again, and so nothing would appear to happen.
-      _counter++;
-    });
+  @override
+  void initState() {
+    super.initState();
+
+    getData();
   }
 
   @override
@@ -136,7 +125,7 @@ class _MyHomePageState extends State<MyHomePage> {
                         shrinkWrap: true,
                         physics: const NeverScrollableScrollPhysics(),
                         children: [
-                          for (var i = 0; i < 6; i++)
+                          for (var i = 0; i < cardList.length; i++)
                             Padding(
                               padding: const EdgeInsets.only(
                                   top: 4.0, bottom: 5.0, left: 5.0, right: 5.0),
@@ -158,10 +147,12 @@ class _MyHomePageState extends State<MyHomePage> {
         ),
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
+        onPressed: () {
+          getData();
+        },
         tooltip: 'Increment',
-        child: const Icon(Icons.add),
-      ), // This trailing comma makes auto-formatting nicer for build methods.
+        child: const Icon(Icons.refresh),
+      ), // This trailing comma
     );
   }
 }
