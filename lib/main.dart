@@ -60,14 +60,14 @@ class _MyHomePageState extends State<MyHomePage> {
         "https://sovapritz.github.io/talking_picture_book/data.json"));
     if (response.statusCode == 200) {
       Map data = jsonDecode(response.body);
-      List<CardEntry> entries = [];
+
       for (var i = 0; i < data["entries"].length; i++) {
         var entry = data["entries"][i];
-        print(entry["imageUrl"]);
         CardEntry cardEntry = CardEntry(
           imageUrl: entry["imageUrl"],
           title: entry["title"],
           description: entry["description"],
+          isAsset: false,
         );
         entries.add(cardEntry);
       }
@@ -81,7 +81,7 @@ class _MyHomePageState extends State<MyHomePage> {
   void initState() {
     super.initState();
 
-    getData();
+    getNetworkData();
   }
 
   @override
@@ -98,57 +98,26 @@ class _MyHomePageState extends State<MyHomePage> {
         // the App.build method, and use it to set our appbar title.
         title: Text(widget.title),
       ),
-      body: SingleChildScrollView(
-        child: Column(
-          children: [
-            SizedBox(
-              height: MediaQuery.of(context).size.height - 50.0,
-              width: double.infinity,
-              child: MediaQuery.removePadding(
-                context: context,
-                removeTop: true, // 謎の余白ができるので対策
-                child: ListView(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  children: <Widget>[
-                    const SizedBox(height: 10),
-                    Container(
-                      padding: const EdgeInsets.only(left: 10.0, right: 10.0),
-                      width: MediaQuery.of(context).size.width - 30.0,
-                      height: MediaQuery.of(context).size.height - 50.0,
-                      child: GridView.count(
+      body: GridView.count(
                         crossAxisCount: 2,
                         primary: false,
                         crossAxisSpacing: 5.0,
                         mainAxisSpacing: 5.0,
-                        childAspectRatio: 1.1,
+        childAspectRatio: 1.2,
                         shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
+        //physics: const NeverScrollableScrollPhysics(),
                         children: [
                           for (var i = 0; i < cardList.length; i++)
                             Padding(
                               padding: const EdgeInsets.only(
                                   top: 4.0, bottom: 5.0, left: 5.0, right: 5.0),
-                              child: TopGridImageCard(
-                                imageUrl: cardList[i].imageUrl,
-                                title: cardList[i].title,
-                                description: cardList[i].description,
-                              ),
+              child: TopGridImageCard(cardEntry: cardList[i]),
                             ),
                         ],
-                      ),
-                    ),
-                    const SizedBox(height: 15.0)
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-          getData();
+          getNetworkData();
         },
         tooltip: 'Increment',
         child: const Icon(Icons.refresh),
@@ -159,20 +128,20 @@ class _MyHomePageState extends State<MyHomePage> {
 
 class CardEntry {
   final String imageUrl, title, description;
-  const CardEntry({
+  final bool isAsset;
+  CardEntry({
     required this.imageUrl,
     required this.title,
     required this.description,
+    required this.isAsset,
   });
 }
 
 class TopGridImageCard extends StatelessWidget {
-  final String imageUrl, title, description;
+  final CardEntry cardEntry;
   const TopGridImageCard({
     Key? key,
-    required this.imageUrl,
-    required this.title,
-    required this.description,
+    required this.cardEntry,
   }) : super(key: key);
 
   @override
@@ -182,8 +151,7 @@ class TopGridImageCard extends StatelessWidget {
         Navigator.push(
           context,
           MaterialPageRoute(
-              builder: (context) => DetailScreen(
-                  imageUrl: imageUrl, title: title, description: description)),
+              builder: (context) => DetailScreen(cardEntry: cardEntry)),
         );
       },
       child: Container(
@@ -217,7 +185,9 @@ class TopGridImageCard extends StatelessWidget {
                     ),
                     image: DecorationImage(
                       fit: BoxFit.fitWidth,
-                      image: NetworkImage(imageUrl),
+                      image: cardEntry.isAsset
+                          ? AssetImage(cardEntry.imageUrl) as ImageProvider
+                          : NetworkImage(cardEntry.imageUrl),
                     ),
                   ),
                 ),
@@ -234,10 +204,10 @@ class TopGridImageCard extends StatelessWidget {
                     Padding(
                       padding: const EdgeInsets.all(12).copyWith(bottom: 0),
                       child: Text(
-                        title,
+                        cardEntry.title,
                         style: const TextStyle(fontSize: 14),
                         overflow: TextOverflow.ellipsis,
-                        maxLines: 3,
+                        maxLines: 1,
                       ),
                     ),
                   ],
@@ -252,14 +222,12 @@ class TopGridImageCard extends StatelessWidget {
 }
 
 class DetailScreen extends StatelessWidget {
-  final String imageUrl, title, description;
+  final CardEntry cardEntry;
   final FlutterTts flutterTts = FlutterTts();
 
   DetailScreen({
     Key? key,
-    required this.imageUrl,
-    required this.title,
-    required this.description,
+    required this.cardEntry,
   }) : super(key: key);
 
   Future<void> _speak() async {
@@ -269,7 +237,7 @@ class DetailScreen extends StatelessWidget {
     await flutterTts.setSpeechRate(0.5);
     await flutterTts.setVolume(1.0);
     await flutterTts.setPitch(1.0);
-    await flutterTts.speak(title + "。。" + description);
+    await flutterTts.speak(cardEntry.title + "。。" + cardEntry.description);
   }
 
   Future<void> _stop() async {
@@ -281,7 +249,7 @@ class DetailScreen extends StatelessWidget {
     _speak();
     return Scaffold(
       appBar: AppBar(
-        title: Text(title),
+        title: Text(cardEntry.title),
       ),
       body: Column(children: [
         InteractiveViewer(
@@ -289,8 +257,14 @@ class DetailScreen extends StatelessWidget {
           boundaryMargin: EdgeInsets.all(100),
           minScale: 1.0,
           maxScale: 3,
-          child: Image.network(
-            imageUrl,
+          child: cardEntry.isAsset
+              ? Image.asset(
+                  cardEntry.imageUrl,
+                  height: 400,
+                  fit: BoxFit.fitWidth,
+                )
+              : Image.network(
+                  cardEntry.imageUrl,
             height: 400,
             fit: BoxFit.fitWidth,
           ),
@@ -298,7 +272,7 @@ class DetailScreen extends StatelessWidget {
         Container(
           padding: const EdgeInsets.only(top: 20, bottom: 20),
           child: Text(
-            title,
+            cardEntry.title,
             style: const TextStyle(
               fontWeight: FontWeight.bold,
               fontSize: 20,
@@ -306,7 +280,7 @@ class DetailScreen extends StatelessWidget {
           ),
         ),
         Text(
-          description,
+          cardEntry.description,
           style: const TextStyle(
             fontSize: 15,
           ),
