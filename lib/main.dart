@@ -28,7 +28,7 @@ class MyApp extends StatelessWidget {
         // is not restarted.
         primarySwatch: Colors.blue,
       ),
-      home: const MyHomePage(title: 'うみのいきもの'),
+      home: const MyHomePage(title: 'ずかん'),
     );
   }
 }
@@ -111,7 +111,11 @@ class _MyHomePageState extends State<MyHomePage> {
                             Padding(
                               padding: const EdgeInsets.only(
                                   top: 4.0, bottom: 5.0, left: 5.0, right: 5.0),
-              child: TopGridImageCard(cardEntry: cardList[i]),
+              child: TopGridImageCard(
+                cardEntry: cardList[i],
+                cardList: cardList,
+                index: i,
+              ),
                             ),
                         ],
       ),
@@ -139,9 +143,14 @@ class CardEntry {
 
 class TopGridImageCard extends StatelessWidget {
   final CardEntry cardEntry;
+  final List<CardEntry> cardList;
+  final int index;
+
   const TopGridImageCard({
     Key? key,
     required this.cardEntry,
+    required this.cardList,
+    required this.index,
   }) : super(key: key);
 
   @override
@@ -151,7 +160,11 @@ class TopGridImageCard extends StatelessWidget {
         Navigator.push(
           context,
           MaterialPageRoute(
-              builder: (context) => DetailScreen(cardEntry: cardEntry)),
+              builder: (context) => DetailScreen(
+                    cardEntry: cardEntry,
+                    cardList: cardList,
+                    index: index,
+                  )),
         );
       },
       child: Container(
@@ -223,11 +236,15 @@ class TopGridImageCard extends StatelessWidget {
 
 class DetailScreen extends StatelessWidget {
   final CardEntry cardEntry;
+  final List<CardEntry> cardList;
+  final int index;
   final FlutterTts flutterTts = FlutterTts();
 
   DetailScreen({
     Key? key,
     required this.cardEntry,
+    required this.cardList,
+    required this.index,
   }) : super(key: key);
 
   Future<void> _speak() async {
@@ -291,14 +308,54 @@ class DetailScreen extends StatelessWidget {
               const EdgeInsets.only(top: 20, left: 30, right: 30, bottom: 40),
           child: Row(
             children: [
+              ElevatedButton(
+                onPressed: () {
+                  if (index > 0) {
+                    Navigator.pushReplacement(
+                      context,
+                      PageRouteBuilder(
+                        pageBuilder: (context, animation1, animation2) =>
+                            DetailScreen(
+                          cardEntry: cardList[index - 1],
+                          cardList: cardList,
+                          index: index - 1,
+                        ),
+                        transitionDuration: Duration.zero,
+                        reverseTransitionDuration: Duration.zero,
+                      ),
+                    );
+                  }
+                },
+                child: const Icon(Icons.arrow_back),
+              ),
               const Spacer(),
               ElevatedButton(
                 onPressed: () {
                   Navigator.pop(context);
                 },
-                child: Text('＜'),
+                child: const Icon(Icons.home),
               ),
               const Spacer(),
+              ElevatedButton(
+                onPressed: () {
+                  if (index < cardList.length - 1) {
+                    Navigator.pushReplacement(
+                      context,
+                      PageRouteBuilder(
+                        pageBuilder: (context, animation1, animation2) =>
+                            DetailScreen(
+                          cardEntry: cardList[index + 1],
+                          cardList: cardList,
+                          index: index + 1,
+                        ),
+                        transitionDuration: Duration.zero,
+                        reverseTransitionDuration: Duration.zero,
+                      ),
+                    );
+                  }
+                },
+                child: const Icon(Icons.arrow_forward),
+              ),
             ],
           ),
         ),
