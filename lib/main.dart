@@ -83,7 +83,7 @@ class _MyHomePageState extends State<MyHomePage> {
   void initState() {
     super.initState();
 
-    getNetworkData();
+    getData();
   }
 
   @override
@@ -123,7 +123,7 @@ class _MyHomePageState extends State<MyHomePage> {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-          getNetworkData();
+          getData();
         },
         tooltip: 'Increment',
         child: const Icon(Icons.refresh),
