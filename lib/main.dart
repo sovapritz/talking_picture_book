@@ -28,6 +28,8 @@ class MyApp extends StatelessWidget {
         // is not restarted.
         primarySwatch: Colors.blue,
       ),
+      darkTheme: ThemeData.dark(),
+      themeMode: ThemeMode.system,
       home: const MyHomePage(title: 'ずかん'),
     );
   }
@@ -160,7 +162,7 @@ class TopGridImageCard extends StatelessWidget {
         Navigator.push(
           context,
           MaterialPageRoute(
-              builder: (context) => DetailScreen(
+              builder: (context) => PagableDetailScreen(
                     cardEntry: cardEntry,
                     cardList: cardList,
                     index: index,
@@ -177,7 +179,7 @@ class TopGridImageCard extends StatelessWidget {
               blurRadius: 5.0,
             ),
           ],
-          color: Colors.white,
+          color: Theme.of(context).cardColor,
         ),
         child: Stack(
           children: <Widget>[
@@ -234,132 +236,118 @@ class TopGridImageCard extends StatelessWidget {
   }
 }
 
-class DetailScreen extends StatelessWidget {
+class PagableDetailScreen extends StatelessWidget {
   final CardEntry cardEntry;
   final List<CardEntry> cardList;
   final int index;
   final FlutterTts flutterTts = FlutterTts();
 
-  DetailScreen({
+  PagableDetailScreen({
     Key? key,
     required this.cardEntry,
     required this.cardList,
     required this.index,
   }) : super(key: key);
 
-  Future<void> _speak() async {
+  Future<void> _speak(CardEntry entry) async {
     await flutterTts.stop();
     await Future.delayed(const Duration(milliseconds: 400));
     await flutterTts.setLanguage("ja-JP");
     await flutterTts.setSpeechRate(0.5);
     await flutterTts.setVolume(1.0);
     await flutterTts.setPitch(1.0);
-    await flutterTts.speak(cardEntry.title + "。。" + cardEntry.description);
+    await flutterTts.speak(entry.title + "。。" + entry.description);
   }
 
   Future<void> _stop() async {
     await flutterTts.stop();
   }
 
-  @override
-  Widget build(BuildContext context) {
-    _speak();
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(cardEntry.title),
+  Widget _detailCard(BuildContext context, CardEntry entry) {
+    return Card(
+      margin: EdgeInsets.only(
+        top: 10, //上
+        right: 5, //右
+        bottom: 50, //下
+        left: 5, //左
       ),
-      body: Column(children: [
+      child: Column(
+        children: [
         InteractiveViewer(
-          panEnabled: true, // Set it to false
+            panEnabled: false, // Set it to false
           boundaryMargin: EdgeInsets.all(100),
           minScale: 1.0,
           maxScale: 3,
-          child: cardEntry.isAsset
+            child: entry.isAsset
               ? Image.asset(
-                  cardEntry.imageUrl,
+                    entry.imageUrl,
                   height: 400,
                   fit: BoxFit.fitWidth,
                 )
               : Image.network(
-                  cardEntry.imageUrl,
-            height: 400,
+                    entry.imageUrl,
+                    //height: 400,
             fit: BoxFit.fitWidth,
           ),
         ),
         Container(
           padding: const EdgeInsets.only(top: 20, bottom: 20),
           child: Text(
-            cardEntry.title,
+              entry.title,
             style: const TextStyle(
               fontWeight: FontWeight.bold,
               fontSize: 20,
             ),
           ),
         ),
-        Text(
-          cardEntry.description,
+          Container(
+            padding:
+                const EdgeInsets.only(top: 10, bottom: 20, left: 15, right: 15),
+            child: Text(
+              entry.description,
           style: const TextStyle(
             fontSize: 15,
           ),
         ),
+          ),
         const Spacer(),
-        Container(
-          padding:
-              const EdgeInsets.only(top: 20, left: 30, right: 30, bottom: 40),
-          child: Row(
-            children: [
-              ElevatedButton(
-                onPressed: () {
-                  if (index > 0) {
-                    Navigator.pushReplacement(
-                      context,
-                      PageRouteBuilder(
-                        pageBuilder: (context, animation1, animation2) =>
-                            DetailScreen(
-                          cardEntry: cardList[index - 1],
-                          cardList: cardList,
-                          index: index - 1,
-                        ),
-                        transitionDuration: Duration.zero,
-                        reverseTransitionDuration: Duration.zero,
+        ],
                       ),
                     );
                   }
+
+  @override
+  Widget build(BuildContext context) {
+    _speak(cardEntry);
+    final PageController pageController =
+        PageController(initialPage: index, viewportFraction: 0.95);
+
+    return Scaffold(
+      appBar: AppBar(
+        title: Text("せつめい"),
+      ),
+      body: Scrollbar(
+        controller: pageController,
+        thumbVisibility: true,
+        child: PageView.builder(
+          // store this controller in a State to save the carousel scroll position
+          itemCount: cardList.length,
+          controller: pageController,
+          onPageChanged: (index) {
+            _speak(cardList[index]);
+          },
+          itemBuilder: (BuildContext context, int itemIndex) {
+            return _detailCard(context, cardList[itemIndex]);
                 },
-                child: const Icon(Icons.arrow_back),
               ),
-              const Spacer(),
-              ElevatedButton(
+      ),
+      floatingActionButton: FloatingActionButton(
                 onPressed: () {
                   Navigator.pop(context);
                 },
+        tooltip: 'Home',
                 child: const Icon(Icons.home),
-              ),
-              const Spacer(),
-              ElevatedButton(
-                onPressed: () {
-                  if (index < cardList.length - 1) {
-                    Navigator.pushReplacement(
-                      context,
-                      PageRouteBuilder(
-                        pageBuilder: (context, animation1, animation2) =>
-                            DetailScreen(
-                          cardEntry: cardList[index + 1],
-                          cardList: cardList,
-                          index: index + 1,
-                        ),
-                        transitionDuration: Duration.zero,
-                        reverseTransitionDuration: Duration.zero,
-                      ),
-                    );
-                  }
-                },
-                child: const Icon(Icons.arrow_forward),
-              ),
-            ],
-          ),
-        ),
-      ]),
+      ), // This trailing comma
     );
   }
 }
